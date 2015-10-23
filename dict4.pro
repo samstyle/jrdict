@@ -3,16 +3,14 @@
 ######################################################################
 
 TEMPLATE = app
-TARGET = 
+TARGET = dict4
 DEPENDPATH += .
 INCLUDEPATH += .
+QT += widgets
 
 # Input
-HEADERS += classes.h vars.h \
-    mtableview.h
+HEADERS += classes.h vars.h mtableview.h
 SOURCES += formwin.cpp main.cpp mainwin.cpp wordwin.cpp
 RESOURCES += dict4.qrc
 
-FORMS += \
-    mainwindow.ui \
-    wordwin.ui
+FORMS += mainwindow.ui wordwin.ui

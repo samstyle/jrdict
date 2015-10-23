@@ -1,7 +1,7 @@
 #ifndef __mwindef
 #define __mwindef
 
-#include <QtGui>
+#include <QTextEdit>
 
 #include "vars.h"
 

@@ -1,7 +1,10 @@
 #ifndef MTABLEVIEW
 #define MTABLEVIEW
 
-#include <QtGui>
+#include <QResizeEvent>
+#include <QTableView>
+#include <QHeaderView>
+#include <QDialog>
 
 class MTableModel : public QAbstractTableModel {
 	public:
@@ -37,7 +40,7 @@ class MTableModel : public QAbstractTableModel {
 			matrix.append(lst);
 		}
 		void update() {
-			reset();
+			endResetModel();
 		}
 	private:
 		QList<QStringList> matrix;
@@ -56,7 +59,7 @@ class MTableView : public QTableView {
 				weight[i] = 0;
 			}
 			setSelectionBehavior(QAbstractItemView::SelectRows);
-			horizontalHeader()->setResizeMode(QHeaderView::Fixed);
+//			horizontalHeader()->setResizeMode(QHeaderView::Fixed);
 			verticalHeader()->setVisible(false);
 		}
 		float weight[10];
