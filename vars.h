@@ -1,5 +1,6 @@
-#ifndef __DICSTR_H
-#define __DICSTR_H
+#pragma once
+
+#include <QString>
 
 struct dWord {
 	QString word;
@@ -9,9 +10,15 @@ struct dWord {
 };
 
 struct dNode {
-	QChar id;
-	QList<dNode> childs;
+//	QChar id;
+//	QList<dNode> childs;
+	QMap<QChar, dNode> childs;
 	QList<dWord> words;
+};
+
+struct kanjitem {
+	QString rd_kun;
+	QString rd_on;
 };
 
 struct formitem {
@@ -37,8 +44,11 @@ struct dictfind {
 	QString comment;
 };
 
+extern QList<dictfind> findres;
+
 void loadDict();
 void saveDict();
+void loadKanji(QString, int = 0);
 void loadForms();
 
 formfind katatohira(formfind);
@@ -51,5 +61,3 @@ void delWord(dWord);
 
 QList<dictfind> scanWords(formfind,bool);
 QList<formfind> getbackforms(QString, QString, int, QString);
-
-#endif

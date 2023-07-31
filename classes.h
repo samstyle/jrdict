@@ -1,7 +1,7 @@
-#ifndef __mwindef
-#define __mwindef
+#pragma once
 
 #include <QTextEdit>
+#include <QSettings>
 
 #include "vars.h"
 
@@ -26,6 +26,7 @@ class MainWin : public QMainWindow {
 	private:
 		Ui::MWindow ui;
 		QClipboard *cbrd;
+		QSettings opt;
 };
 
 class WordWin : public QDialog {
@@ -60,5 +61,3 @@ class FormWin : public QDialog {
 		QPushButton *okbut,*canbut;
 		QString formpath;
 };
-
-#endif

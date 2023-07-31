@@ -4,6 +4,7 @@
 #include "classes.h"
 
 QList<dictfind> findres;
+extern QMap<QString, kanjitem> kanji;
 
 MainWin::MainWin(QWidget *parent):QMainWindow(parent) {
 	ui.setupUi(this);
@@ -12,8 +13,8 @@ MainWin::MainWin(QWidget *parent):QMainWindow(parent) {
 	ui.result->weight[1] = .1;
 	ui.result->weight[2] = .1;
 	ui.result->weight[3] = .1;
-	ui.result->weight[4] = .35;
-	ui.result->weight[5] = .25;
+	ui.result->weight[4] = .40;
+	ui.result->weight[5] = .20;
 	cbrd = QApplication::clipboard();
 
 	QObject::connect(ui.leText,SIGNAL(textChanged(QString)),this,SLOT(gotranslate()));
@@ -24,6 +25,9 @@ MainWin::MainWin(QWidget *parent):QMainWindow(parent) {
 	QObject::connect(ui.result,SIGNAL(doubleClicked(QModelIndex)),this,SLOT(wanoldword(QModelIndex)));
 	QObject::connect(ui.result,SIGNAL(indexchanged(int)),this,SLOT(reselect(int)));
 	QObject::connect(cbrd,SIGNAL(dataChanged()),this,SLOT(tranCbrd()));
+
+	opt.setDefaultFormat(QSettings::IniFormat);
+	opt.setValue("global/test", 1);
 }
 
 void MainWin::delword() {
@@ -51,6 +55,8 @@ void MainWin::waneword() {
 void MainWin::reload() {
 	loadDict();
 	loadForms();
+	loadKanji("kana.jrk", 1);
+	loadKanji("kanji.jrk");
 	gotranslate();
 }
 
@@ -59,11 +65,30 @@ void MainWin::tranCbrd() {
 	ui.leText->setText(cbrd->text());
 }
 
+void addfindkanji(MTableModel* model, QString kanjisrc, QString kanjird, int pos) {
+	dictfind df;
+	QStringList lst;
+	df.src = kanjisrc;
+	df.len = kanjisrc.size();
+	df.begin = pos - df.len;
+	findres.append(df);
+	lst.append(kanjisrc);
+	lst.append("");
+	lst.append(kanjird);
+	lst.append("");
+	lst.append("");
+	model->addrow(lst);
+}
+
 void MainWin::gotranslate() {
 	QString string = ui.leText->text();
 	QString current;
+	QString ch;
 	QStringList lst;
+	QString kanjisrc;
+	QString kanjird;
 	QList<dictfind> curr,burr;
+	dictfind df;
 	int maxlen = (string.size()<10)?string.size():10;
 	int i,j,k,m,len,pos=0;
 	bool kap;
@@ -97,7 +122,12 @@ void MainWin::gotranslate() {
 				}
 			}
 		}
-		if (burr.size() != 0) {
+		if (burr.size() > 0) {
+			if (kanjisrc.size() > 0) {
+				addfindkanji(model, kanjisrc, kanjird, pos);
+				kanjisrc.clear();
+				kanjird.clear();
+			}
 			findres.append(burr);
 			for(i = 0;i < burr.size(); i++) {
 				lst.clear();
@@ -114,9 +144,32 @@ void MainWin::gotranslate() {
 				model->addrow(lst);
 			}
 			len=current.size();
-		} else {len = 1;}
+		} else {
+			len = 2;
+			ch = string.left(2);
+			if (!kanji.contains(ch)) {
+				len = 1;
+				ch = string.left(1);
+				if (!kanji.contains(ch))
+					len = 0;
+			}
+			if (len == 0) {
+				if (kanjisrc.size() > 0) {
+					addfindkanji(model, kanjisrc, kanjird, pos);
+					kanjisrc.clear();
+					kanjird.clear();
+				}
+				len = 1;
+			} else {
+				kanjisrc.append(ch);
+				kanjird.append(kanji[ch].rd_on);
+			}
+		}
 		pos += len;
 		string.remove(0,len);
+	}
+	if (!kanjisrc.isEmpty()) {
+		addfindkanji(model, kanjisrc, kanjird, pos);
 	}
 	model->update();
 }

@@ -4,18 +4,24 @@
 #include "classes.h"
 
 //QString basedir=".";
-QString basedir = QDir::homePath().append("/.config/samstyle/jrdict/");
+QString basedir;
 
 dNode dict;
 
 //dict sysdict;
 QList<formitem> forms;
-const QString dictpath = basedir + "dict.dic";
-const QString formpath = basedir + "forms4.jrf";
+QMap<QString, kanjitem> kanji;
+QString dictpath;
+QString formpath;
 
 // tree dict
 
 dNode* findChild(dNode* par, QChar ch) {
+	dNode* res = NULL;
+	if (par->childs.contains(ch)) {
+		res = &par->childs[ch];
+	}
+/*
 	int i;
 	dNode* res = NULL;
 	for (i = 0; i < par->childs.size(); i++) {
@@ -24,6 +30,7 @@ dNode* findChild(dNode* par, QChar ch) {
 			break;
 		}
 	}
+*/
 	return res;
 }
 
@@ -32,21 +39,19 @@ dNode* findNode(QString word, int mkPath) {
 	dNode* par = &dict;
 	QChar ch;
 	dNode newNode;
+	newNode.childs.clear();
+	newNode.words.clear();
 	foreach(ch, word) {
-		res = findChild(par, ch);
-		if (res == NULL) {
-			if (mkPath) {
-				newNode.id = ch;
-				newNode.childs.clear();
-				newNode.words.clear();
-				par->childs.append(newNode);
-				res = &par->childs[par->childs.size() - 1];
-				par = res;
-			} else {
-				break;
-			}
+		if (par->childs.contains(ch)) {
+			par = &par->childs[ch];
+			res = par;
+		} else if (mkPath) {
+			par->childs[ch] = newNode;
+			par = &par->childs[ch];
+			res = par;
 		} else {
-			par = res;
+			word.clear();
+			res = NULL;
 		}
 	}
 	return res;
@@ -96,8 +101,8 @@ void delWord(dWord wrd) {
 
 // old
 
-QString hiragana = QDialog::trUtf8("あえういおんばべぶびぼだでづぢどがげぐぎごはへふひほかけくきこまめむみもなねぬにのぱぺぷぴぽられるりろさせすしそたてつちとやゆよざぜずじぞわをぁぇぅぃぉゃゅょっ");
-QString katakana = QDialog::trUtf8("アエウイオンバベブビボダデヅヂドガゲグギゴハヘフヒホカケクキコマメムミモナネヌニノパペプピポラレルリロサセスシソタテツチトヤユヨザゼズジゾワヲァェゥィォャュョッ");
+QString hiragana = QObject::trUtf8("あえういおんばべぶびぼだでづぢどがげぐぎごはへふひほかけくきこまめむみもなねぬにのぱぺぷぴぽられるりろさせすしそたてつちとやゆよざぜずじぞわをぁぇぅぃぉゃゅょっ");
+QString katakana = QObject::trUtf8("アエウイオンバベブビボダデヅヂドガゲグギゴハヘフヒホカケクキコマメムミモナネヌニノパペプピポラレルリロサセスシソタテツチトヤユヨザゼズジゾワヲァェゥィォャュョッ");
 
 bool iskana(QChar symbol) {
 	return ((katakana.indexOf(symbol)!=-1) or (hiragana.indexOf(symbol)!=-1));
@@ -116,13 +121,13 @@ formfind katatohira(formfind ffn) {
 }
 
 QList<dictfind> getChildsWords(dNode* nod) {
-	int i;
 	dWord wrd;
 	dNode* chld;
 	QList<dictfind> res;
 	dictfind df;
-	for (i = 0; i < nod->childs.size(); i++) {
-		chld = &nod->childs[i];
+	QChar ch;
+	foreach (ch, nod->childs.keys()) {
+		chld = &nod->childs[ch];
 		foreach(wrd, chld->words) {
 			df.word = wrd;
 			res.append(df);
@@ -167,7 +172,7 @@ QList<dictfind> scanWords(formfind nani, bool full) {
 
 QList<formfind> getbackforms(QString string,QString typz,int rec=0,QString lcom="") {
 	QList<formfind> res,curfind;
-	QStringList frmz = typz.split(" ",QString::SkipEmptyParts); int m; bool oka,only;
+	QStringList frmz = typz.split(" ",Qt::SkipEmptyParts); int m; bool oka,only;
 	formfind newform;
 	QString btype;
 	newform.form=string; newform.type="*";res.append(newform);	// сама строчка = форма
@@ -198,8 +203,8 @@ void loadForms() {
 	QString lastend;
 	formitem newitem;
 	bool ok;
-	int count=0;
 	forms.clear();
+	QString formpath = basedir + "forms4.jrf";
 	QFile file(formpath);
 	if (file.exists()) {
 		file.open(QFile::ReadOnly);
@@ -215,38 +220,66 @@ void loadForms() {
 					newitem.betype = list[3];
 					newitem.type = list[4];
 					if (list.size()>5) {newitem.comment=list[5];} else {newitem.comment="";}
-					if (ok) {forms.append(newitem);count++;}
+					if (ok) {forms.append(newitem);}
 				}
 			}
 		}
-		qDebug()<<"Forms total\t"<<count;
+		qDebug()<<"Forms total\t"<<forms.size();
 		file.close();
 	} else {
 		qDebug()<<"Form file"<<formpath<<"doesn't exist. No forms aviable";
 	}
 }
 
-void saveLeaf(QFile& file, dNode& nod) {
-	int i;
-	for (i = 0; i < nod.words.size(); i++) {
-		file.write(nod.words[i].word.toUtf8());
+void loadKanji(QString fname, int clr) {
+	QString kanjpath = basedir + fname;
+	QFile file(kanjpath);
+	QStringList list;
+	QString ch;
+	kanjitem itm;
+	if (clr) kanji.clear();
+	if (file.open(QFile::ReadOnly)) {
+		while(!file.atEnd()) {
+			list = QDialog::trUtf8(file.readLine()).remove(QRegExp("[\r\n]")).split("\t", Qt::SkipEmptyParts);
+			if (list.size() > 1) {
+				ch = list[0];
+				itm.rd_on = list[1];
+				if (list.size() > 2) {
+					itm.rd_kun = list[2];
+				} else {
+					itm.rd_kun.clear();
+				}
+				kanji[ch] = itm;
+			}
+		}
+		qDebug() << "Kanji total\t"<<kanji.size();
+		file.close();
+	} else {
+		qDebug() << "Can't open Kanji file" << kanjpath;
+	}
+}
+
+void saveLeaf(QFile& file, dNode* nod) {
+	dWord wrd;
+	foreach (wrd, nod->words) {
+		file.write(wrd.word.toUtf8());
 		file.write("\t");
-		file.write(nod.words[i].read.toUtf8());
+		file.write(wrd.read.toUtf8());
 		file.write("\t");
-		file.write(nod.words[i].type.toUtf8());
+		file.write(wrd.type.toUtf8());
 		file.write("\t");
-		file.write(nod.words[i].trans.toUtf8());
+		file.write(wrd.trans.toUtf8());
 		file.write("\r\n");
 	}
-	for (i = 0; i < nod.childs.size(); i++) {
-		saveLeaf(file, nod.childs[i]);
+	foreach (QChar key, nod->childs.keys()) {
+		saveLeaf(file, &nod->childs[key]);
 	}
 }
 
 void saveDict() {
 	QFile file(dictpath);
 	if (!file.open(QFile::WriteOnly)) return;
-	saveLeaf(file, dict);
+	saveLeaf(file, &dict);
 	file.close();
 }
 
@@ -259,7 +292,7 @@ void loadDict() {
 	dWord word;
 	int count = 0;
 	while (!file.atEnd()) {
-		line = QDialog::trUtf8(file.readLine()).remove(QRegExp("[\r\n]")).split("\t",QString::SkipEmptyParts);
+		line = QDialog::trUtf8(file.readLine()).remove(QRegExp("[\r\n]")).split("\t",Qt::SkipEmptyParts);
 		if (line.size() > 3) {
 			word.word = line[0];
 			word.read = line[1];
@@ -269,19 +302,28 @@ void loadDict() {
 			count++;
 		}
 	}
-	qDebug() << count << "words loaded";
+	qDebug() << "Words total\t"<< count;
 }
 
 int main(int ac,char* av[]) {
 
 	QApplication app(ac,av);
+	app.setOrganizationName("samstyle");
+	app.setApplicationName("jrdict");
+
+	basedir = QDir::homePath().append("/.config/samstyle/jrdict/");
+	formpath = basedir + "forms4.jrf";
+	dictpath = basedir + "dict.dic";
+
 	loadForms();
 	loadDict();
+	loadKanji("kana.jrk", 1);
+	loadKanji("kanji.jrk");
 
 	MainWin mainwin(NULL);
 	WordWin wordwin(&mainwin, &dict);
 	FormWin formwin(&mainwin, formpath);
-	
+
 	QObject::connect(&mainwin,SIGNAL(wannaeditword(dWord)),&wordwin,SLOT(goeditword(dWord)));
 	QObject::connect(&mainwin,SIGNAL(wannaform()),&formwin,SLOT(goforms()));
 

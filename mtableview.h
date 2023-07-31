@@ -1,5 +1,4 @@
-#ifndef MTABLEVIEW
-#define MTABLEVIEW
+#pragma once
 
 #include <QResizeEvent>
 #include <QTableView>
@@ -80,6 +79,3 @@ class MTableView : public QTableView {
 			QTableView::resizeEvent(event);
 		}
 };
-
-#endif // MTABLEVIEW
-
